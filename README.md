@@ -18,4 +18,4 @@ while moving on the scene. Then restores the previous settings.
 Copy paste the contents of the folder `FixSlowSceneViewMovement` anywhere you want inside the Assets folder of your Unity project
 
 ### Limitations
-Only works for Windows users. It should work on Unity 2019, and with very small changes in 2018 and 2017.
+Only works for Windows users. It should work on Unity 2017, 2018 and 2019.

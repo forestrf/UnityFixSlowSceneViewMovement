@@ -20,16 +20,20 @@ namespace Ashkatchap {
 	public class OptimizeSceneView {
 		[InitializeOnLoadMethod]
 		static void Init() {
-			SceneView.beforeSceneGui += new OptimizeSceneView().BeforeSceneGUI;
+#if UNITY_2019_1_OR_NEWER
+			SceneView.duringSceneGui += new OptimizeSceneView().DuringSceneGui;
+#else
+			SceneView.onSceneGUIDelegate += new OptimizeSceneView().DuringSceneGui;
+#endif
 		}
 
 		KeyboardRepetition keyboardRepetition = new KeyboardRepetition();
-		void BeforeSceneGUI(SceneView sceneView) {
+		void DuringSceneGui(SceneView sceneView) {
 			Event current = Event.current;
 
 			switch (current.type) {
 				case EventType.MouseDown:
-					keyboardRepetition.Disable();
+					keyboardRepetition.Modify();
 					break;
 				case EventType.MouseUp:
 				case EventType.DragExited:
@@ -52,12 +56,9 @@ namespace Ashkatchap {
 
 			int originalKeyboardDelay;
 			int originalKeyboardSpeed;
+			bool modified = false;
 
-			public KeyboardRepetition() {
-				Read();
-			}
-
-			public unsafe void Read() {
+			private unsafe void Read() {
 				fixed (int* oldPtr = &originalKeyboardDelay) {
 					bool success = SystemParametersInfoA(SPI_GETKEYBOARDDELAY, 0, new IntPtr(oldPtr), 0);
 				}
@@ -65,7 +66,11 @@ namespace Ashkatchap {
 					bool success = SystemParametersInfoA(SPI_GETKEYBOARDSPEED, 0, new IntPtr(oldPtr), 0);
 				}
 			}
-			public unsafe void Disable() {
+			public unsafe void Modify() {
+				if (modified) return;
+
+				Read();
+
 				int fixKeyboardDelay = 3;
 				int* oldPtr = &fixKeyboardDelay;
 				bool success = SystemParametersInfoA(SPI_SETKEYBOARDDELAY, 0, new IntPtr(oldPtr), 0);
@@ -73,8 +78,12 @@ namespace Ashkatchap {
 				int fixKeyboardSpeed = 0;
 				oldPtr = &fixKeyboardSpeed;
 				success = SystemParametersInfoA(SPI_SETKEYBOARDSPEED, 0, new IntPtr(oldPtr), 0);
+
+				modified = true;
 			}
 			public unsafe void Restore() {
+				if (!modified) return;
+
 				fixed (int* oldPtr = &originalKeyboardDelay) {
 					bool success = SystemParametersInfoA(SPI_SETKEYBOARDDELAY, 0, new IntPtr(oldPtr), 0);
 				}
