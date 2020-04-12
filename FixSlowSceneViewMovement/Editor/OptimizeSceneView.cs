@@ -83,13 +83,13 @@ namespace Ashkatchap {
 				int* ptr = &pvParam;
 				bool success = SystemParametersInfo(KEY, 0, new IntPtr(ptr), 0);
 				if (!success) Debug.LogError("There was a problem");
-				Debug.Log("Read: " + pvParam);
+				//Debug.Log("Read: " + pvParam);
 				return pvParam;
 			}
 			private void Write(int KEY, int uiParam) {
 				bool success = SystemParametersInfo(KEY, uiParam, IntPtr.Zero, 0);
 				if (!success) Debug.LogError("There was a problem");
-				Debug.Log("Written: " + uiParam);
+				//Debug.Log("Written: " + uiParam);
 			}
 
 
