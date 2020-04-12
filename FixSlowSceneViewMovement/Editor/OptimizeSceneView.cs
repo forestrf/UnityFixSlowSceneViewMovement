@@ -48,7 +48,7 @@ namespace Ashkatchap {
 			keyboardRepetition.Restore();
 		}
 
-		class KeyboardRepetition {
+		unsafe class KeyboardRepetition {
 			const int SPI_GETKEYBOARDDELAY = 0x0016;
 			const int SPI_SETKEYBOARDDELAY = 0x0017;
 			const int SPI_GETKEYBOARDSPEED = 0x000A;
@@ -56,45 +56,45 @@ namespace Ashkatchap {
 
 			int originalKeyboardDelay;
 			int originalKeyboardSpeed;
+			int fixKeyboardDelay = 3;
+			int fixKeyboardSpeed = 0;
 			bool modified = false;
 
-			private unsafe void Read() {
-				fixed (int* oldPtr = &originalKeyboardDelay) {
-					bool success = SystemParametersInfoA(SPI_GETKEYBOARDDELAY, 0, new IntPtr(oldPtr), 0);
-				}
-				fixed (int* oldPtr = &originalKeyboardSpeed) {
-					bool success = SystemParametersInfoA(SPI_GETKEYBOARDSPEED, 0, new IntPtr(oldPtr), 0);
-				}
-			}
-			public unsafe void Modify() {
+			public void Modify() {
 				if (modified) return;
-
-				Read();
-
-				int fixKeyboardDelay = 3;
-				int* oldPtr = &fixKeyboardDelay;
-				bool success = SystemParametersInfoA(SPI_SETKEYBOARDDELAY, 0, new IntPtr(oldPtr), 0);
-
-				int fixKeyboardSpeed = 0;
-				oldPtr = &fixKeyboardSpeed;
-				success = SystemParametersInfoA(SPI_SETKEYBOARDSPEED, 0, new IntPtr(oldPtr), 0);
-
 				modified = true;
+
+				originalKeyboardDelay = Read(SPI_GETKEYBOARDDELAY);
+				originalKeyboardSpeed = Read(SPI_GETKEYBOARDSPEED);
+
+				Write(SPI_SETKEYBOARDDELAY, fixKeyboardDelay);
+				Write(SPI_SETKEYBOARDSPEED, fixKeyboardSpeed);
 			}
 			public unsafe void Restore() {
 				if (!modified) return;
+				modified = false;
 
-				fixed (int* oldPtr = &originalKeyboardDelay) {
-					bool success = SystemParametersInfoA(SPI_SETKEYBOARDDELAY, 0, new IntPtr(oldPtr), 0);
-				}
-				fixed (int* oldPtr = &originalKeyboardSpeed) {
-					bool success = SystemParametersInfoA(SPI_SETKEYBOARDSPEED, 0, new IntPtr(oldPtr), 0);
-				}
+				Write(SPI_SETKEYBOARDDELAY, originalKeyboardDelay);
+				Write(SPI_SETKEYBOARDSPEED, originalKeyboardSpeed);
+			}
+
+			private int Read(int KEY) {
+				int pvParam;
+				int* ptr = &pvParam;
+				bool success = SystemParametersInfo(KEY, 0, new IntPtr(ptr), 0);
+				if (!success) Debug.LogError("There was a problem");
+				Debug.Log("Read: " + pvParam);
+				return pvParam;
+			}
+			private void Write(int KEY, int uiParam) {
+				bool success = SystemParametersInfo(KEY, uiParam, IntPtr.Zero, 0);
+				if (!success) Debug.LogError("There was a problem");
+				Debug.Log("Written: " + uiParam);
 			}
 
 
 			[DllImport("user32.dll", SetLastError = true)]
-			static extern bool SystemParametersInfoA(int uiAction, int uiParam, IntPtr pvParam, int fWinIni);
+			static extern bool SystemParametersInfo(int uiAction, int uiParam, IntPtr pvParam, int fWinIni);
 		}
 	}
 }
