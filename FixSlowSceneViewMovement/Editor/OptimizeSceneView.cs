@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEngine;
@@ -20,11 +20,27 @@ namespace Ashkatchap {
 	public class OptimizeSceneView {
 		[InitializeOnLoadMethod]
 		static void Init() {
+			var fixer = new OptimizeSceneView();
 #if UNITY_2019_1_OR_NEWER
-			SceneView.duringSceneGui += new OptimizeSceneView().DuringSceneGui;
+			SceneView.duringSceneGui += fixer.DuringSceneGui;
 #else
-			SceneView.onSceneGUIDelegate += new OptimizeSceneView().DuringSceneGui;
+			SceneView.onSceneGUIDelegate += fixer.DuringSceneGui;
 #endif
+			EditorApplication.playModeStateChanged += fixer.OnPlayModeState;
+		}
+
+		private bool forceFixOn;
+		private void OnPlayModeState(PlayModeStateChange state) {
+			switch (state) {
+				case PlayModeStateChange.EnteredPlayMode:
+					forceFixOn = true;
+					keyboardRepetition.Modify();
+					break;
+				case PlayModeStateChange.ExitingPlayMode:
+					forceFixOn = false;
+					keyboardRepetition.Restore();
+					break;
+			}
 		}
 
 		KeyboardRepetition keyboardRepetition = new KeyboardRepetition();
@@ -39,7 +55,9 @@ namespace Ashkatchap {
 				case EventType.DragExited:
 				case EventType.ContextClick:
 				case EventType.MouseLeaveWindow:
-					keyboardRepetition.Restore();
+					if (!forceFixOn) {
+						keyboardRepetition.Restore();
+					}
 					break;
 			}
 		}
@@ -54,11 +72,15 @@ namespace Ashkatchap {
 			const int SPI_GETKEYBOARDSPEED = 0x000A;
 			const int SPI_SETKEYBOARDSPEED = 0x000B;
 
-			int originalKeyboardDelay;
-			int originalKeyboardSpeed;
+			int originalKeyboardDelay = 0;
+			int originalKeyboardSpeed = 31;
 			int fixKeyboardDelay = 3;
 			int fixKeyboardSpeed = 0;
 			bool modified = false;
+
+			public KeyboardRepetition() {
+				modified = Read(SPI_GETKEYBOARDDELAY) == fixKeyboardDelay;
+			}
 
 			public void Modify() {
 				if (modified) return;
